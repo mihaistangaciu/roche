@@ -1,0 +1,33 @@
+
+node('maven') {
+
+    try {
+
+        stage('Checkout') {
+            git url: 'https://github.com/mihaistangaciu/rouche.git', branch: "master"
+            def pom = readMavenPom([file: 'pom.xml'])
+            def version = pom.version
+            currentBuild.displayName = "${env.BRANCH_NAME}-${version}-${env.BUILD_NUMBER}"
+        }
+
+        stage('Build with Unit Tests') {
+            "sh clean install"
+        }
+        sonarQube({})
+
+        stage('Deploy to Nexus') {
+            "sh mvn deploy "
+        }
+
+        //add deployment to Kubernetes
+
+        //add BDD test
+    } catch(err) {
+        sendSlackNotification([
+                channel: 'rouche-status',
+                token: 'TOKEN',
+                error: err
+        ])
+        throw err
+    }
+}
